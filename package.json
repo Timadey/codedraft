@@ -1,0 +1,190 @@
+{
+  "name": "codedraft",
+  "displayName": "CodeDraft",
+  "description": "Turn your code learnings into blog drafts automatically",
+  "version": "0.1.0",
+  "publisher": "codedraft",
+  "icon": "assets/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Timadey/codedraft"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Snippets",
+    "Notebooks"
+  ],
+  "keywords": [
+    "blogging",
+    "documentation",
+    "learning",
+    "notes",
+    "ai"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codedraft.captureSnippet",
+        "title": "CodeDraft: Capture Code Snippet",
+        "icon": "$(code)"
+      },
+      {
+        "command": "codedraft.addLearning",
+        "title": "CodeDraft: Add Learning Note",
+        "icon": "$(note)"
+      },
+      {
+        "command": "codedraft.generateDraft",
+        "title": "CodeDraft: Generate Draft",
+        "icon": "$(wand)"
+      },
+      {
+        "command": "codedraft.weeklyReview",
+        "title": "CodeDraft: Weekly Learning Review"
+      },
+      {
+        "command": "codedraft.openDraft",
+        "title": "CodeDraft: Open Draft"
+      },
+      {
+        "command": "codedraft.deleteCapture",
+        "title": "CodeDraft: Delete Capture"
+      },
+      {
+        "command": "codedraft.deleteDraft",
+        "title": "CodeDraft: Delete Draft"
+      },
+      {
+        "command": "codedraft.exportDraft",
+        "title": "CodeDraft: Export Draft"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codedraft",
+          "title": "CodeDraft",
+          "icon": "$(notebook)"
+        }
+      ]
+    },
+    "views": {
+      "codedraft": [
+        {
+          "id": "codedraftView",
+          "name": "Captures & Drafts"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "codedraft.captureSnippet",
+        "key": "ctrl+shift+c",
+        "mac": "cmd+shift+c",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "codedraft.addLearning",
+        "key": "ctrl+shift+l",
+        "mac": "cmd+shift+l"
+      },
+      {
+        "command": "codedraft.generateDraft",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "codedraft.captureSnippet",
+          "when": "editorHasSelection",
+          "group": "codedraft@1"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "codedraft.deleteCapture",
+          "when": "view == codedraftView && viewItem == capture",
+          "group": "inline"
+        },
+        {
+          "command": "codedraft.deleteDraft",
+          "when": "view == codedraftView && viewItem == draft",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CodeDraft",
+      "properties": {
+        "codedraft.ai.provider": {
+          "type": "string",
+          "enum": [
+            "ollama",
+            "openai",
+            "anthropic",
+            "grok",
+            "cohere"
+          ],
+          "default": "ollama",
+          "description": "AI provider for draft generation. Ollama is free and local."
+        },
+        "codedraft.ai.model": {
+          "type": "string",
+          "default": "llama3",
+          "description": "AI model to use (e.g., llama3 for Ollama, gpt-4 for OpenAI, claude-3-sonnet for Anthropic)"
+        },
+        "codedraft.ai.endpoint": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "AI service endpoint (for Ollama)"
+        },
+        "codedraft.ai.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for cloud AI providers (OpenAI, Anthropic, Grok). Leave empty for Ollama."
+        },
+        "codedraft.capture.surroundingLines": {
+          "type": "number",
+          "default": 10,
+          "minimum": 0,
+          "maximum": 50,
+          "description": "Number of lines before/after captured code to include for context"
+        },
+        "codedraft.capture.autoExtractContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically extract rich context (function names, project info, etc.) when capturing"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.1",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.4.0",
+    "@typescript-eslint/parser": "^6.4.0",
+    "eslint": "^8.47.0",
+    "glob": "^10.3.3",
+    "typescript": "^5.3.0"
+  },
+  "author": "Timadey",
+  "license": "ISC"
+}
