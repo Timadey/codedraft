@@ -1,18 +1,12 @@
 import * as vscode from 'vscode';
 import { CaptureItem } from '../models/CaptureItem';
-
-// AI Provider interfaces
-export interface AIProvider {
-    name: string;
-    call(prompt: string, options: AICallOptions): Promise<string>;
-    isAvailable(): Promise<boolean>;
-}
-
-export interface AICallOptions {
-    temperature?: number;
-    maxTokens?: number;
-    systemPrompt?: string;
-}
+import { AIProvider } from "./providers/AIProvider";
+import { OllamaProvider } from "./providers/OllamaProvider";
+import { OpenAIProvider } from "./providers/OpenAIProvider";
+import { AnthropicProvider } from "./providers/AnthropicProvider";
+import { GrokProvider } from "./providers/GrokProvider";
+import { CohereProvider } from "./providers/CohereProvider";
+import { SimpleAIProvider } from "./providers/SimpleAIProvider";
 
 export type DraftStyle = 'technical' | 'conversational' | 'tutorial' | 'deep-dive' | 'quick-tip';
 
@@ -158,18 +152,21 @@ export class AIService {
             return text;
         }).join('\n---\n');
 
-        return `Based on these code learnings and their context, suggest 7 compelling blog post titles.
+        return `Based on these code learnings, suggest 5 compelling and universally insightful technical blog post titles.
 
 ${capturesText}
 
 Requirements:
+- Abstract the core technical lesson into a title that any developer can relate to and find valuable.
+- Avoid using project-specific names or local context in the titles unless they are industry-standard names (e.g., "React", "Docker").
+- Focus on the "What", "Why", or "How-To" of the underlying technical pattern or solution.
 - ${style === 'conversational' ? 'Friendly and approachable' : 'Professional and technical'}
 - SEO-friendly with relevant keywords
-- Clear and specific about the content
+- Clear and specific about the insight being shared
 - 50-70 characters each
 - Audience: intermediate to senior developers
 
-Return exactly 3 titles, numbered 1-3, one per line.`;
+Return exactly 5 titles, numbered 1-5, one per line.`;
     }
 
     /**
@@ -188,12 +185,12 @@ ${contextSummary}
 ${capturesText}
 
 Create an outline that:
-1. Starts with a compelling introduction (hook + why this matters)
-2. Has 3-5 main sections covering the key concepts
-3. Includes spots for code examples
-4. Addresses common pitfalls or gotchas
-5. Ends with actionable takeaways
-6. ${style === 'tutorial' ? 'Follows step-by-step structure' : 'Flows naturally'}
+1. Starts with a compelling introduction (hook + the universal problem this addresses)
+2. Focuses on general principles, technical trade-offs, and best practices derived from these captures
+3. Has 3-5 main sections that flow logically from problem statement to solution and insights
+4. Includes strategic spots for code examples to illustrate core concepts
+5. Addresses "Why this matters" for any developer encounter similar technical challenges
+6. ${style === 'tutorial' ? 'Follows step-by-step structure' : 'Connects concepts through a narrative of discovery and knowledge'}
 
 Return in Markdown format with ## headers and bullet points.`;
     }
@@ -211,24 +208,24 @@ Return in Markdown format with ## headers and bullet points.`;
         const codeExamples = this.formatCodeExamples(captures);
 
         const styleGuidelines = {
-            'technical': 'Professional tone, precise terminology, assume reader has context',
-            'conversational': 'Friendly tone, explain concepts clearly, use "you" and "we"',
-            'tutorial': 'Step-by-step instructions, very clear explanations, beginner-friendly',
-            'deep-dive': 'Comprehensive analysis, explore edge cases, advanced concepts',
-            'quick-tip': 'Concise and actionable, get to the point fast, practical focus'
+            'technical': 'Professional tone, precise terminology, emphasize the pattern and architecture',
+            'conversational': 'Friendly, mentor-like tone, explain concepts clearly, use "you" and "we" to build shared experience',
+            'tutorial': 'Clear instructions, explain the "why" behind each step, focus on reproducibility',
+            'deep-dive': 'Comprehensive analysis, explore nuances and edge cases, connect specific code to broader computer science principles',
+            'quick-tip': 'Concise and immediately actionable, focusing on a single high-value insight'
         };
 
-        return `Write a complete technical blog post.
+        return `Write a complete technical blog post that shares deep insight and universal value.
 
 # Title: ${title}
 
-## Context
+## Context (for your reference, do not mention project-specific names)
 ${contextSummary}
 
 ## Outline
 ${outline}
 
-## Code Examples to Include
+## Code Examples (use these as concrete illustrations of the concepts)
 ${codeExamples}
 
 ## Style Guidelines
@@ -236,15 +233,17 @@ ${styleGuidelines[style]}
 
 ## Requirements
 - Write in Markdown format
-- Include the code examples with proper syntax highlighting
-- Add inline explanations where helpful
-- Use ### for main sections, #### for subsections
-- Keep paragraphs focused (3-5 sentences)
-- Add a brief introduction explaining the problem/motivation
-- End with key takeaways and optional next steps
+- Frame the content so it is relatable to any developer, regardless of whether they are on your specific project.
+- Focus on extracting and explaining knowledge that has lasting value beyond the current task.
+- Use the provided code captures as evidence for the patterns or solutions you are describing.
+- Include the code examples with proper syntax highlighting.
+- Use ### for main sections, #### for subsections.
+- Keep paragraphs focused (3-5 sentences).
+- Start with an introduction that defines a common developer pain point or curiosity.
+- End with "Key Insights" or "Takeaways" that the reader can apply to their own work.
 - Target length: ${style === 'quick-tip' ? '400-600' : style === 'deep-dive' ? '1200-1800' : '800-1200'} words
 
-Return ONLY the blog post content in Markdown. Start with a brief introduction (no title needed).`;
+Return ONLY the blog post content in Markdown.`;
     }
 
     /**
@@ -265,6 +264,14 @@ Return ONLY the blog post content in Markdown. Start with a brief introduction (
 
         if (capture.context?.surroundingCode) {
             text += `\n<details><summary>Surrounding context</summary>\n\n\`\`\`${capture.code?.language || 'text'}\n${capture.context.surroundingCode.substring(0, 500)}...\n\`\`\`\n</details>\n`;
+        }
+
+        if (capture.context?.commitMessage) {
+            text += `\n**Related Git Commit:** ${capture.context.commitMessage} (${capture.context.commitHash})\n`;
+        }
+
+        if (capture.context?.diff) {
+            text += `\n**Git Diff Context:**\n\`\`\`diff\n${capture.context.diff.substring(0, 1000)}${capture.context.diff.length > 1000 ? '\n... [diff truncated]' : ''}\n\`\`\`\n`;
         }
 
         return text;
@@ -310,17 +317,17 @@ Return ONLY the blog post content in Markdown. Start with a brief introduction (
      */
     private getSystemPrompt(task: 'title' | 'outline' | 'draft', style: DraftStyle): string {
         const basePrompts = {
-            title: 'You are a technical content advisor helping software engineers create compelling blog post titles. Generate SEO-friendly, specific, developer-focused titles.',
-            outline: 'You are a technical writing assistant creating blog post outlines. Structure content logically and ensure it flows well.',
-            draft: 'You are an experienced technical writer creating blog posts for software engineers. Write clearly, use code examples effectively, and make complex topics accessible.'
+            title: 'You are a senior technical advisor. Your goal is to transform specific coding tasks into universally relatable, insight-driven, SEO friendly, technical blog titles. You excel at abstracting the "core lesson" from specific project context.',
+            outline: 'You are a master technical writer. You create outlines that bridge the gap between a specific code fix and the universal engineering principles it demonstrates. You structure content to maximize knowledge sharing.',
+            draft: 'You are a mentor and senior engineer sharing high-value technical insights. You write for an audience of peers who want to understand patterns, trade-offs, and "the better way" to solve problems, using specific examples as concrete evidence for general truths.'
         };
 
         const styleAdditions = {
-            conversational: ' Use a friendly, approachable tone.',
-            tutorial: ' Focus on clear step-by-step instructions.',
-            'deep-dive': ' Go deep into technical details and edge cases.',
-            'quick-tip': ' Be concise and actionable.',
-            technical: ' Use precise technical terminology.'
+            conversational: ' Use a friendly, approachable, and relatable tone as if sharing with a colleague over coffee.',
+            tutorial: ' Focus on clear, reproducible steps while explaining the universal "why" behind each action.',
+            'deep-dive': ' Provide comprehensive analysis, exploring technical nuances, trade-offs, and underlying principles.',
+            'quick-tip': ' Be concise, high-impact, and immediately actionable.',
+            technical: ' Use precise terminology and focus on architectural elegance and pattern implementation.'
         };
 
         return basePrompts[task] + styleAdditions[style];
@@ -363,273 +370,3 @@ Return ONLY the blog post content in Markdown. Start with a brief introduction (
         ];
     }
 }
-
-// Provider implementations
-class SimpleAIProvider implements AIProvider {
-    name = 'Simple AI';
-
-    async isAvailable(): Promise<boolean> {
-        return true;
-    }
-
-    async call(prompt: string, options: AICallOptions): Promise<string> {
-        if (prompt.includes('suggest 3 compelling blog post titles')) {
-            return '1. Understanding Modern Development Practices\n2. Lessons Learned from Real-World Coding\n3. A Developer\'s Guide to Better Code';
-        }
-        return 'Simple AI response - configure a real AI provider in settings for better results.';
-    }
-}
-
-class OllamaProvider implements AIProvider {
-    name = 'Ollama';
-    private readonly endpoint: string;
-    private readonly model: string;
-
-    constructor() {
-        const config = vscode.workspace.getConfiguration('codedraft');
-        this.endpoint = config.get('ai.endpoint', 'http://localhost:11434');
-        this.model = config.get('ai.model', 'llama3');
-    }
-
-    async isAvailable(): Promise<boolean> {
-        try {
-            const response = await fetch(`${this.endpoint}`);
-            return response.ok;
-        } catch {
-            return false;
-        }
-    }
-
-    async call(prompt: string, options: AICallOptions): Promise<string> {
-        const fullPrompt = options.systemPrompt ? `${options.systemPrompt}\n\n${prompt}` : prompt;
-
-        const response = await fetch(`${this.endpoint}/api/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: this.model,
-                prompt: fullPrompt,
-                stream: false,
-                options: {
-                    temperature: options.temperature || 0.7,
-                    num_predict: options.maxTokens || 1000
-                }
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Ollama error: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        // @ts-ignore
-        return data.response;
-    }
-}
-
-class OpenAIProvider implements AIProvider {
-    name = 'OpenAI';
-    private readonly apiKey: string;
-    private readonly model: string;
-
-    constructor() {
-        const config = vscode.workspace.getConfiguration('codedraft');
-        this.apiKey = config.get('ai.apiKey', '');
-        this.model = config.get('ai.model', 'gpt-4');
-    }
-
-    async isAvailable(): Promise<boolean> {
-        return this.apiKey.length > 0;
-    }
-
-    async call(prompt: string, options: AICallOptions): Promise<string> {
-        const messages: any[] = [];
-        if (options.systemPrompt) {
-            messages.push({ role: 'system', content: options.systemPrompt });
-        }
-        messages.push({ role: 'user', content: prompt });
-
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: this.model,
-                messages,
-                temperature: options.temperature || 0.7,
-                max_tokens: options.maxTokens || 1000
-            })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            // @ts-ignore
-            throw new Error(error.error?.message || 'OpenAI API error');
-        }
-
-        const data = await response.json();
-        // @ts-ignore
-        return data.choices[0].message.content;
-    }
-}
-
-class AnthropicProvider implements AIProvider {
-    name = 'Anthropic Claude';
-    private readonly apiKey: string;
-    private readonly model: string;
-
-    constructor() {
-        const config = vscode.workspace.getConfiguration('codedraft');
-        this.apiKey = config.get('ai.apiKey', '');
-        this.model = config.get('ai.model', 'claude-3-sonnet-20240229');
-    }
-
-    async isAvailable(): Promise<boolean> {
-        return this.apiKey.length > 0;
-    }
-
-    async call(prompt: string, options: AICallOptions): Promise<string> {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'x-api-key': this.apiKey,
-                'anthropic-version': '2023-06-01',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: this.model,
-                max_tokens: options.maxTokens || 1000,
-                system: options.systemPrompt,
-                messages: [{ role: 'user', content: prompt }]
-            })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            // @ts-ignore
-            throw new Error(error.error?.message || 'Anthropic API error');
-        }
-
-        const data = await response.json();
-        // @ts-ignore
-        return data.content[0].text;
-    }
-}
-
-class GrokProvider implements AIProvider {
-    name = 'Grok';
-    private readonly apiKey: string;
-    private readonly model: string;
-
-    constructor() {
-        const config = vscode.workspace.getConfiguration('codedraft');
-        this.apiKey = config.get('ai.apiKey', '');
-        this.model = config.get('ai.model', 'grok-beta');
-    }
-
-    async isAvailable(): Promise<boolean> {
-        return this.apiKey.length > 0;
-    }
-
-    async call(prompt: string, options: AICallOptions): Promise<string> {
-        const messages: any[] = [];
-        if (options.systemPrompt) {
-            messages.push({ role: 'system', content: options.systemPrompt });
-        }
-        messages.push({ role: 'user', content: prompt });
-
-        const response = await fetch('https://api.x.ai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: this.model,
-                messages,
-                temperature: options.temperature || 0.7,
-                max_tokens: options.maxTokens || 1000
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error('Grok API error');
-        }
-
-        const data = await response.json();
-        // @ts-ignore
-        return data.choices[0].message.content;
-    }
-}
-
-class CohereProvider implements AIProvider {
-    name = 'Cohere';
-    private readonly apiKey: string;
-    private readonly model: string;
-
-    constructor() {
-        const config = vscode.workspace.getConfiguration('codedraft');
-        this.apiKey = config.get('ai.apiKey', '');
-        this.model = config.get('ai.model', 'command-a-03-2025');
-    }
-
-    async isAvailable(): Promise<boolean> {
-        return this.apiKey.trim().length > 0;
-    }
-
-    async call(prompt: string, options: AICallOptions): Promise<string> {
-        const messages: Array<{ role: 'system' | 'user'; content: string }> = [];
-
-        if (options.systemPrompt) {
-            messages.push({
-                role: 'system',
-                content: options.systemPrompt
-            });
-        }
-
-        messages.push({
-            role: 'user',
-            content: prompt
-        });
-
-        const response = await fetch('https://production.api.cohere.com/v2/chat', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: this.model,
-                messages,
-                temperature: options.temperature ?? 0.7,
-                max_tokens: options.maxTokens ?? 1000
-            })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            // @ts-ignore
-            throw new Error(error?.message || 'Cohere API error');
-        }
-
-        const data = await response.json();
-
-        /**
-         * Cohere responses are NOT OpenAI-shaped.
-         * Be explicit and defensive.
-         */
-        // @ts-ignore
-        if (!data.message?.content?.length) {
-            throw new Error('Empty response from Cohere');
-        }
-
-        // @ts-ignore
-        return data.message.content
-            .map((part: any) => part.text)
-            .join('');
-    }
-}
-
-

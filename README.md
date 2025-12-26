@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="./assets/icon.png" width="128" alt="CodeDraft Logo" />
+  <img src="https://github.com/Timadey/codedraft/blob/3cd963a8eec4b7e32578b66ab041079a7deffd87/assets/icon.png" width="128" alt="CodeDraft Logo" />
 </p>
 
 # CodeDraft 📝
 
 **Turn your code learnings into blog drafts — automatically.**
 
-![CodeDraft Preview](./assets/preview.png)
+![CodeDraft Preview](https://github.com/Timadey/codedraft/blob/3cd963a8eec4b7e32578b66ab041079a7deffd87/assets/preview.png)
 
 CodeDraft is a Visual Studio Code (VS Code) extension designed for software engineers who struggle to maintain a consistent technical writing habit. By integrating directly into the developer's primary workflow (coding and Git), CodeDraft captures insights "in-flow," aggregates them intelligently, and generates ready-to-publish drafts.
 
@@ -58,4 +58,4 @@ Contributions are welcome! Please see our [CONTRIBUTING.md](./CONTRIBUTING.md) f
 CodeDraft is released under the [ISC License](./LICENSE).
 
 ---
-Built with ❤️ by [Timadey](https://github.com/Timadey)
+Built with ❤️ by for growing developers

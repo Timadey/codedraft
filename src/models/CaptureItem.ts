@@ -25,6 +25,7 @@ export interface CaptureContext {
     // Git context
     commitHash?: string;
     commitMessage?: string;
+    diff?: string;
     diffSummary?: string;
     affectedFiles?: string[];
 

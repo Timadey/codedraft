@@ -13,15 +13,18 @@
     "vscode": "^1.80.0"
   },
   "categories": [
-    "Other",
+    "Writing",
+    "Documentation",
     "Snippets",
-    "Notebooks"
+    "Notebooks",
+    "Other"
   ],
   "keywords": [
     "blogging",
     "documentation",
     "learning",
     "notes",
+    "writing",
     "ai"
   ],
   "activationEvents": [

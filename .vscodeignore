@@ -1,2 +1,5 @@
-assets
 .codedraft
+.github
+.idea
+.vscode
+assets/preview.png

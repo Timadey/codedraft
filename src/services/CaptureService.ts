@@ -1,13 +1,16 @@
 import * as vscode from 'vscode';
-import { CaptureItem, createCapture, CaptureType, CodeSnippet } from '../models/CaptureItem';
+import { CaptureItem, createCapture, CaptureType, CodeSnippet, CaptureContext } from '../models/CaptureItem';
 import { StorageService } from './StorageService';
 import { ContextExtractor } from '../utils/ContextExtractor';
+import { GitService } from './GitService';
 
 export class CaptureService {
     private contextExtractor: ContextExtractor;
+    private gitService: GitService;
 
     constructor(private storage: StorageService) {
         this.contextExtractor = new ContextExtractor();
+        this.gitService = new GitService();
     }
 
     async captureCodeSnippet(editor?: vscode.TextEditor): Promise<CaptureItem | null> {
@@ -27,7 +30,7 @@ export class CaptureService {
         const filePath = vscode.workspace.asRelativePath(editor.document.uri);
 
         // Extract rich context
-        let context;
+        let context: CaptureContext | undefined;
         try {
             context = await this.contextExtractor.extractContext(editor, selection);
             vscode.window.showInformationMessage('📸 Extracting context...');
@@ -54,6 +57,44 @@ export class CaptureService {
             lineEnd: selection.end.line + 1
         };
 
+        // Gather Git context if requested
+        const gitOption = await vscode.window.showQuickPick([
+            { label: '$(git-commit) Include Latest Commit', value: 'latest' },
+            { label: '$(diff) Include Current Changes', value: 'changes' },
+            { label: '$(history) Include Recent File Changes (7 days)', value: 'recent' },
+            { label: '$(circle-slash) No Git Context', value: 'none' }
+        ], {
+            placeHolder: 'Include Git context with this capture?'
+        });
+
+        if (gitOption && gitOption.value !== 'none') {
+            if (!context) context = { filePath, fileName: '', language };
+
+            if (gitOption.value === 'latest') {
+                const commit = await this.gitService.getLatestCommit();
+                if (commit) {
+                    context.commitHash = commit.hash.substring(0, 7);
+                    context.commitMessage = commit.message;
+                    context.diff = await this.gitService.getCommitDiff(commit.hash) || undefined;
+                    vscode.window.showInformationMessage(`Attached commit: ${context.commitMessage}`);
+                }
+            } else if (gitOption.value === 'changes') {
+                const changes = await this.gitService.getCurrentChanges();
+                if (changes) {
+                    context.diff = changes.diff;
+                    context.affectedFiles = changes.affectedFiles;
+                    vscode.window.showInformationMessage(`Attached uncommitted changes (${changes.affectedFiles.length} files)`);
+                }
+            } else if (gitOption.value === 'recent') {
+                const files = await this.gitService.getRecentChanges(7);
+                if (files.length > 0) {
+                    context.affectedFiles = files;
+                    context.diffSummary = `Recently changed files: ${files.join(', ')}`;
+                    vscode.window.showInformationMessage(`Attached list of ${files.length} recently changed files`);
+                }
+            }
+        }
+
         const capture = createCapture('snippet', snippet, {
             code: codeSnippet,
             notes: notes || '',
@@ -79,7 +120,42 @@ export class CaptureService {
             return null;
         }
 
-        const capture = createCapture('learning', content);
+        // Gather Git context if requested
+        const gitOption = await vscode.window.showQuickPick([
+            { label: '$(git-commit) Include Latest Commit', value: 'latest' },
+            { label: '$(diff) Include Current Changes', value: 'changes' },
+            { label: '$(history) Include Recent File Changes (7 days)', value: 'recent' },
+            { label: '$(circle-slash) No Git Context', value: 'none' }
+        ], {
+            placeHolder: 'Include Git context with this learning note?'
+        });
+
+        let context: CaptureContext | undefined = undefined;
+        if (gitOption && gitOption.value !== 'none') {
+            context = { filePath: 'note', fileName: 'note', language: 'markdown' };
+            if (gitOption.value === 'latest') {
+                const commit = await this.gitService.getLatestCommit();
+                if (commit) {
+                    context.commitHash = commit.hash.substring(0, 7);
+                    context.commitMessage = commit.message;
+                    context.diff = await this.gitService.getCommitDiff(commit.hash) || undefined;
+                }
+            } else if (gitOption.value === 'changes') {
+                const changes = await this.gitService.getCurrentChanges();
+                if (changes) {
+                    context.diff = changes.diff;
+                    context.affectedFiles = changes.affectedFiles;
+                }
+            } else if (gitOption.value === 'recent') {
+                const files = await this.gitService.getRecentChanges(7);
+                if (files.length > 0) {
+                    context.affectedFiles = files;
+                    context.diffSummary = `Recently changed files: ${files.join(', ')}`;
+                }
+            }
+        }
+
+        const capture = createCapture('learning', content, { context });
         await this.storage.saveCapture(capture);
         vscode.window.showInformationMessage('✅ Learning note captured!');
 
