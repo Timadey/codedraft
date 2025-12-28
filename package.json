@@ -74,7 +74,7 @@
       {
         "command": "codedraft.previewDraft",
         "title": "CodeDraft: Preview Draft",
-        "icon": "$(check)"
+        "icon": "$(eye)"
       }
     ],
     "viewsContainers": {
@@ -129,12 +129,12 @@
         {
           "command": "codedraft.deleteDraft",
           "when": "view == codedraftView && viewItem == draft",
-          "group": "inline"
+          "group": "inline@2"
         },
         {
           "command": "codedraft.previewDraft",
           "when": "view == codedraftView && viewItem == draft",
-          "group": "navigation"
+          "group": "inline@1"
         }
       ]
     },

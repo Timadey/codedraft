@@ -329,10 +329,14 @@ export class MarkdownPreviewService {
 
     <script>
         const vscode = acquireVsCodeApi();
-        const markdownContent = ${JSON.stringify(draft.content)};
+        const markdownContent = decodeURIComponent("${encodeURIComponent(draft.content)}");
 
         function copyMarkdown() {
             vscode.postMessage({ command: 'copyMarkdown' });
+            const btn = document.querySelector('.btn-secondary');
+            const original = btn.innerHTML;
+            btn.innerHTML = '<span>✅</span> Copied!';
+            setTimeout(() => { btn.innerHTML = original; }, 2000);
         }
 
         function renderMarkdown(markdown) {
