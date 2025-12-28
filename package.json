@@ -2,7 +2,7 @@
   "name": "codedraft",
   "displayName": "CodeDraft",
   "description": "Turn your coding progress into publishable posts, blogs, and docs.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "timadey",
   "icon": "assets/icon.png",
   "repository": {

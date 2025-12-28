@@ -3,6 +3,7 @@
 .idea
 .vscode
 assets/preview.png
+assets/illustrations/gifs
 src
 .vscode/**
 .vscode-test/**
