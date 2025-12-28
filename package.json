@@ -1,9 +1,9 @@
 {
   "name": "codedraft",
   "displayName": "CodeDraft",
-  "description": "Turn your code learnings into blog drafts automatically",
+  "description": "Turn your coding progress into publishable posts, blogs, and docs.",
   "version": "0.1.0",
-  "publisher": "codedraft",
+  "publisher": "timadey",
   "icon": "assets/icon.png",
   "repository": {
     "type": "git",
@@ -58,15 +58,18 @@
       },
       {
         "command": "codedraft.deleteCapture",
-        "title": "CodeDraft: Delete Capture"
+        "title": "CodeDraft: Delete Capture",
+        "icon": "$(trash)"
       },
       {
         "command": "codedraft.deleteDraft",
-        "title": "CodeDraft: Delete Draft"
+        "title": "CodeDraft: Delete Draft",
+        "icon": "$(trash)"
       },
       {
         "command": "codedraft.exportDraft",
-        "title": "CodeDraft: Export Draft"
+        "title": "CodeDraft: Export Draft",
+        "icon": "$(clippy)"
       }
     ],
     "viewsContainers": {

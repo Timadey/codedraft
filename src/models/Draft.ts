@@ -52,16 +52,15 @@ export function createDraft(
 
 export function draftToMarkdown(draft: Draft): string {
     return `---
-        id: ${draft.id}
-        title: ${draft.title}
-        status: ${draft.status}
-        created: ${new Date(draft.createdAt).toISOString()}
-        updated: ${new Date(draft.updatedAt).toISOString()}
-        tags: [${draft.metadata.tags.join(', ')}]
-        sourceCaptures: [${draft.sourceCaptures.join(', ')}]
-        ${draft.aiMetadata ? `aiGenerated: true\naiModel: ${draft.aiMetadata.model}` : ''}
-        ---
+id: ${draft.id}
+title: ${draft.title}
+status: ${draft.status}
+created: ${new Date(draft.createdAt).toISOString()}
+updated: ${new Date(draft.updatedAt).toISOString()}
+tags: [${draft.metadata.tags.join(', ')}]
+sourceCaptures: [${draft.sourceCaptures.join(', ')}]
+${draft.aiMetadata ? `aiGenerated: true\naiModel: ${draft.aiMetadata.model}` : ''}
+---
 
-        ${draft.content}
-        `;
+${draft.content}`;
 }

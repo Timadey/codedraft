@@ -1,15 +1,15 @@
 import * as vscode from 'vscode';
 import { Draft, createDraft } from '../models/Draft';
 import { StorageService } from './StorageService';
-import { AIService, DraftStyle } from './AIService';
+import { AIService, DraftStyle, GenerationFocus, GenerationOptions } from './AIService';
 
 export class DraftService {
     constructor(
         private storage: StorageService,
         private aiService: AIService
-    ) {}
+    ) { }
 
-    async generateDraftFromCaptures(captureIds: string[], style?: DraftStyle): Promise<Draft> {
+    async generateDraftFromCaptures(captureIds: string[], initialOptions: GenerationOptions = {}): Promise<Draft> {
         const allCaptures = await this.storage.loadCaptures();
         const captures = allCaptures.filter(c => captureIds.includes(c.id));
 
@@ -17,7 +17,34 @@ export class DraftService {
             throw new Error('No captures selected');
         }
 
-        // Ask user to select style if not provided
+        let style = initialOptions.style;
+        let focus = initialOptions.focus;
+        let customRules = initialOptions.customRules;
+
+        // 1. Choose Focus (Universal vs Implementation)
+        if (!focus) {
+            const focusOptions = [
+                {
+                    label: '$(globe) Universal Technical Insight',
+                    description: 'Broadly relatable, focus on patterns and general principles',
+                    value: 'universal' as GenerationFocus
+                },
+                {
+                    label: '$(project) Project Implementation Guide',
+                    description: 'Specific to this codebase, names files and functions',
+                    value: 'implementation' as GenerationFocus
+                }
+            ];
+
+            const selectedFocus = await vscode.window.showQuickPick(focusOptions, {
+                placeHolder: 'Choose the focus for your blog post'
+            });
+
+            if (!selectedFocus) throw new Error('No focus selected');
+            focus = selectedFocus.value;
+        }
+
+        // 2. Choose Style
         if (!style) {
             const styleOptions = [
                 { label: '📝 Technical', description: 'Professional and precise', value: 'technical' as DraftStyle },
@@ -27,16 +54,23 @@ export class DraftService {
                 { label: '⚡ Quick Tip', description: 'Short and actionable', value: 'quick-tip' as DraftStyle }
             ];
 
-            const selected = await vscode.window.showQuickPick(styleOptions, {
-                placeHolder: 'Choose writing style for your draft'
+            const selectedStyle = await vscode.window.showQuickPick(styleOptions, {
+                placeHolder: 'Choose writing style'
             });
 
-            if (!selected) {
-                throw new Error('No style selected');
-            }
-
-            style = selected.value;
+            if (!selectedStyle) throw new Error('No style selected');
+            style = selectedStyle.value;
         }
+
+        // 3. Optional Custom Rules
+        if (customRules === undefined) {
+            customRules = await vscode.window.showInputBox({
+                prompt: 'Any custom rules or fine-tuning instructions? (Optional)',
+                placeHolder: 'e.g., "Write like a developer from the 80s", "Focus heavily on performance caveats"',
+            });
+        }
+
+        const options: GenerationOptions = { style, focus, customRules };
 
         return vscode.window.withProgress(
             {
@@ -46,7 +80,7 @@ export class DraftService {
             },
             async (progress) => {
                 progress.report({ message: 'Generating titles...', increment: 20 });
-                const titles = await this.aiService.generateTitle(captures, style);
+                const titles = await this.aiService.generateTitle(captures, options);
 
                 const selectedTitle = await vscode.window.showQuickPick(titles, {
                     placeHolder: 'Select a title for your blog post'
@@ -57,10 +91,10 @@ export class DraftService {
                 }
 
                 progress.report({ message: 'Creating outline...', increment: 30 });
-                const outline = await this.aiService.generateOutline(captures, selectedTitle, style);
+                const outline = await this.aiService.generateOutline(captures, selectedTitle, options);
 
                 progress.report({ message: 'Writing draft with context...', increment: 40 });
-                const content = await this.aiService.generateDraft(captures, outline, selectedTitle, style);
+                const content = await this.aiService.generateDraft(captures, outline, selectedTitle, options);
 
                 progress.report({ message: 'Finalizing...', increment: 10 });
 
@@ -70,7 +104,7 @@ export class DraftService {
 
                 const draft = createDraft(selectedTitle, content, captureIds, {
                     model: `${aiProvider}/${aiModel}`,
-                    prompt: `Generated with ${style} style`,
+                    prompt: `Generated with ${style} style, ${focus} focus`,
                     generatedAt: Date.now()
                 });
 

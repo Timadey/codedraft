@@ -9,6 +9,13 @@ import { CohereProvider } from "./providers/CohereProvider";
 import { SimpleAIProvider } from "./providers/SimpleAIProvider";
 
 export type DraftStyle = 'technical' | 'conversational' | 'tutorial' | 'deep-dive' | 'quick-tip';
+export type GenerationFocus = 'universal' | 'implementation';
+
+export interface GenerationOptions {
+    style?: DraftStyle;
+    focus?: GenerationFocus;
+    customRules?: string;
+}
 
 export class AIService {
     private provider: AIProvider | null = null;
@@ -59,13 +66,17 @@ export class AIService {
     /**
      * Generate title suggestions with rich context
      */
-    async generateTitle(captures: CaptureItem[], style: DraftStyle = 'technical'): Promise<string[]> {
+    async generateTitle(captures: CaptureItem[], options: GenerationOptions = {}): Promise<string[]> {
+        const style = options.style || 'technical';
+        const focus = options.focus || 'universal';
+        const customRules = options.customRules;
+
         if (!this.provider) {
             await this.initializeProvider();
         }
 
-        const prompt = this.buildTitlePrompt(captures, style);
-        const systemPrompt = this.getSystemPrompt('title', style);
+        const prompt = this.buildTitlePrompt(captures, style, focus, customRules);
+        const systemPrompt = this.getSystemPrompt('title', style, focus);
 
         try {
             const response = await this.provider!.call(prompt, {
@@ -87,14 +98,18 @@ export class AIService {
     async generateOutline(
         captures: CaptureItem[],
         title: string,
-        style: DraftStyle = 'technical'
+        options: GenerationOptions = {}
     ): Promise<string> {
+        const style = options.style || 'technical';
+        const focus = options.focus || 'universal';
+        const customRules = options.customRules;
+
         if (!this.provider) {
             await this.initializeProvider();
         }
 
-        const prompt = this.buildOutlinePrompt(captures, title, style);
-        const systemPrompt = this.getSystemPrompt('outline', style);
+        const prompt = this.buildOutlinePrompt(captures, title, style, focus, customRules);
+        const systemPrompt = this.getSystemPrompt('outline', style, focus);
 
         return await this.provider!.call(prompt, {
             systemPrompt,
@@ -110,14 +125,18 @@ export class AIService {
         captures: CaptureItem[],
         outline: string,
         title: string,
-        style: DraftStyle = 'technical'
+        options: GenerationOptions = {}
     ): Promise<string> {
+        const style = options.style || 'technical';
+        const focus = options.focus || 'universal';
+        const customRules = options.customRules;
+
         if (!this.provider) {
             await this.initializeProvider();
         }
 
-        const prompt = this.buildDraftPrompt(captures, outline, title, style);
-        const systemPrompt = this.getSystemPrompt('draft', style);
+        const prompt = this.buildDraftPrompt(captures, outline, title, style, focus, customRules);
+        const systemPrompt = this.getSystemPrompt('draft', style, focus);
 
         return await this.provider!.call(prompt, {
             systemPrompt,
@@ -129,8 +148,9 @@ export class AIService {
     /**
      * Build rich title prompt with context
      */
-    private buildTitlePrompt(captures: CaptureItem[], style: DraftStyle): string {
+    private buildTitlePrompt(captures: CaptureItem[], style: DraftStyle, focus: GenerationFocus, customRules?: string): string {
         const capturesText = captures.map((c, idx) => {
+            // ... (keep same capture text formatting)
             let text = `\n## Capture ${idx + 1}\n`;
             text += `**Type:** ${c.type}\n`;
             text += `**Notes:** ${c.notes}\n`;
@@ -152,19 +172,26 @@ export class AIService {
             return text;
         }).join('\n---\n');
 
-        return `Based on these code learnings, suggest 5 compelling and universally insightful technical blog post titles.
+        const focusReqs = focus === 'universal'
+            ? `- Abstract the core technical lesson into a title that any developer can relate to and find valuable.
+- Avoid using project-specific names or local context in the titles unless they are industry-standard names (e.g., "React", "Docker").`
+            : `- Focus on the specific implementation in the codebase.
+- Use specific function names, file paths, and project components where relevant.`;
+
+        const rulesText = customRules ? `\n\n**Special Instructions/Custom Rules:**\n${customRules}` : '';
+
+        return `Based on these code learnings, suggest 5 compelling technical blog post titles.
 
 ${capturesText}
 
 Requirements:
-- Abstract the core technical lesson into a title that any developer can relate to and find valuable.
-- Avoid using project-specific names or local context in the titles unless they are industry-standard names (e.g., "React", "Docker").
-- Focus on the "What", "Why", or "How-To" of the underlying technical pattern or solution.
+${focusReqs}
+- Focus on the "What", "Why", or "How-To" of the technical solution.
 - ${style === 'conversational' ? 'Friendly and approachable' : 'Professional and technical'}
 - SEO-friendly with relevant keywords
-- Clear and specific about the insight being shared
+- Clear and specific about the content being shared
 - 50-70 characters each
-- Audience: intermediate to senior developers
+- Audience: ${focus === 'universal' ? 'intermediate to senior developers' : 'developers working on this specific codebase'}${rulesText}
 
 Return exactly 5 titles, numbered 1-5, one per line.`;
     }
@@ -172,9 +199,18 @@ Return exactly 5 titles, numbered 1-5, one per line.`;
     /**
      * Build rich outline prompt
      */
-    private buildOutlinePrompt(captures: CaptureItem[], title: string, style: DraftStyle): string {
+    private buildOutlinePrompt(captures: CaptureItem[], title: string, style: DraftStyle, focus: GenerationFocus, customRules?: string): string {
         const contextSummary = this.summarizeContext(captures);
         const capturesText = captures.map(c => this.formatCaptureForPrompt(c)).join('\n\n');
+        const rulesText = customRules ? `\n\n**Special Instructions/Custom Rules:**\n${customRules}` : '';
+
+        const focusInstructions = focus === 'universal'
+            ? `1. Starts with a compelling introduction (hook + the universal problem this addresses)
+2. Focuses on general principles, technical trade-offs, and best practices derived from these captures
+3. Addresses "Why this matters" for any developer encounter similar technical challenges`
+            : `1. Starts with a technical introduction (the specific module being implemented and why)
+2. Focuses on the codebase architecture, file-by-file changes, and specific implementation logic
+3. Addresses implementation details, code structure, and internal dependencies`;
 
         return `Create a detailed blog post outline for: "${title}"
 
@@ -185,12 +221,11 @@ ${contextSummary}
 ${capturesText}
 
 Create an outline that:
-1. Starts with a compelling introduction (hook + the universal problem this addresses)
-2. Focuses on general principles, technical trade-offs, and best practices derived from these captures
-3. Has 3-5 main sections that flow logically from problem statement to solution and insights
-4. Includes strategic spots for code examples to illustrate core concepts
-5. Addresses "Why this matters" for any developer encounter similar technical challenges
-6. ${style === 'tutorial' ? 'Follows step-by-step structure' : 'Connects concepts through a narrative of discovery and knowledge'}
+${focusInstructions}
+4. Has 3-5 main sections that flow logically from problem statement to solution and insights
+5. Includes strategic spots for code examples to illustrate core concepts
+6. ${style === 'tutorial' ? 'Follows step-by-step structure' : 'Connects concepts through a narrative format'}
+${rulesText}
 
 Return in Markdown format with ## headers and bullet points.`;
     }
@@ -202,30 +237,44 @@ Return in Markdown format with ## headers and bullet points.`;
         captures: CaptureItem[],
         outline: string,
         title: string,
-        style: DraftStyle
+        style: DraftStyle,
+        focus: GenerationFocus,
+        customRules?: string
     ): string {
         const contextSummary = this.summarizeContext(captures);
         const codeExamples = this.formatCodeExamples(captures);
+        const rulesText = customRules ? `\n\n**Special Instructions/Custom Rules:**\n${customRules}` : '';
 
         const styleGuidelines = {
-            'technical': 'Professional tone, precise terminology, emphasize the pattern and architecture',
+            'technical': 'Professional tone, precise terminology, emphasize the architecture and logic',
             'conversational': 'Friendly, mentor-like tone, explain concepts clearly, use "you" and "we" to build shared experience',
-            'tutorial': 'Clear instructions, explain the "why" behind each step, focus on reproducibility',
-            'deep-dive': 'Comprehensive analysis, explore nuances and edge cases, connect specific code to broader computer science principles',
-            'quick-tip': 'Concise and immediately actionable, focusing on a single high-value insight'
+            'tutorial': 'Clear instructions, explain the "why" behind each implementation step, focus on reproducibility',
+            'deep-dive': 'Comprehensive analysis, explore nuances and edge cases, connect details to broader principles',
+            'quick-tip': 'Concise and immediately actionable, focusing on specific high-value implementation or pattern'
         };
 
-        return `Write a complete technical blog post that shares deep insight and universal value.
+        const focusInstructions = focus === 'universal'
+            ? `- Frame the content so it is relatable to any developer, regardless of whether they are on your specific project.
+- Focus on extracting and explaining knowledge that has lasting value beyond the current task.
+- Start with an introduction that defines a common developer pain point or curiosity.
+- End with "Key Insights" or "Takeaways" that the reader can apply to their own work.`
+            : `- Focus on the specific implementation in this codebase.
+- Name specific files, function names, and project-specific components used in the captures.
+- Explain the implementation logic and decision-making for this exact problem.
+- Start with an introduction explaining the goal of the implementation.
+- End with "Implementation Summary" or "Development Notes".`;
+
+        return `Write a complete technical blog post.
 
 # Title: ${title}
 
-## Context (for your reference, do not mention project-specific names)
+## Context ${focus === 'universal' ? '(for your reference, do not mention project-specific names)' : '(use these project specifics freely)'}
 ${contextSummary}
 
 ## Outline
 ${outline}
 
-## Code Examples (use these as concrete illustrations of the concepts)
+## Code Examples (use these as concrete illustrations)
 ${codeExamples}
 
 ## Style Guidelines
@@ -233,15 +282,13 @@ ${styleGuidelines[style]}
 
 ## Requirements
 - Write in Markdown format
-- Frame the content so it is relatable to any developer, regardless of whether they are on your specific project.
-- Focus on extracting and explaining knowledge that has lasting value beyond the current task.
-- Use the provided code captures as evidence for the patterns or solutions you are describing.
+${focusInstructions}
+- Use the provided code captures as evidence for the implementation or patterns you are describing.
 - Include the code examples with proper syntax highlighting.
 - Use ### for main sections, #### for subsections.
 - Keep paragraphs focused (3-5 sentences).
-- Start with an introduction that defines a common developer pain point or curiosity.
-- End with "Key Insights" or "Takeaways" that the reader can apply to their own work.
 - Target length: ${style === 'quick-tip' ? '400-600' : style === 'deep-dive' ? '1200-1800' : '800-1200'} words
+${rulesText}
 
 Return ONLY the blog post content in Markdown.`;
     }
@@ -315,11 +362,17 @@ Return ONLY the blog post content in Markdown.`;
     /**
      * System prompts for different tasks
      */
-    private getSystemPrompt(task: 'title' | 'outline' | 'draft', style: DraftStyle): string {
+    private getSystemPrompt(task: 'title' | 'outline' | 'draft', style: DraftStyle, focus: GenerationFocus): string {
         const basePrompts = {
-            title: 'You are a senior technical advisor. Your goal is to transform specific coding tasks into universally relatable, insight-driven, SEO friendly, technical blog titles. You excel at abstracting the "core lesson" from specific project context.',
-            outline: 'You are a master technical writer. You create outlines that bridge the gap between a specific code fix and the universal engineering principles it demonstrates. You structure content to maximize knowledge sharing.',
-            draft: 'You are a mentor and senior engineer sharing high-value technical insights. You write for an audience of peers who want to understand patterns, trade-offs, and "the better way" to solve problems, using specific examples as concrete evidence for general truths.'
+            title: focus === 'universal'
+                ? 'You are a senior technical advisor. Your goal is to transform specific coding tasks into universally relatable, insight-driven, SEO friendly, technical blog titles. You excel at abstracting the "core lesson" from specific project context.'
+                : 'You are a technical documentarian. Your goal is to create precise, SEO friendly titles for a technical implementation guide. Focus on naming specific technologies, files, and functions used in the codebase.',
+            outline: focus === 'universal'
+                ? 'You are a master technical writer. You create outlines that bridge the gap between a specific code fix and the universal engineering principles it demonstrates. You structure content to maximize knowledge sharing.'
+                : 'You are a technical architect documenting a project. You create detailed outlines for implementation guides, focusing on explaining the internal logic, structure, and dependencies of the specific codebase.',
+            draft: focus === 'universal'
+                ? 'You are a mentor and senior engineer sharing high-value technical insights. You write for an audience of peers who want to understand patterns, trade-offs, and "the better way" to solve problems, using specific examples as concrete evidence for general truths.'
+                : 'You are an engineer writing a detailed walkthrough of your implementation. You explain *exactly* how the code was built, naming files, functions, and project-specific components. Your goal is to help other developers on the *same project* understand your technical decisions.'
         };
 
         const styleAdditions = {
