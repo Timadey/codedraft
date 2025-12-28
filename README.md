@@ -6,8 +6,6 @@
 
 **Turn your coding progress into publishable posts, blogs, and docs.**
 
-![CodeDraft Preview](https://raw.githubusercontent.com/Timadey/codedraft/3cd963a8eec4b7e32578b66ab041079a7deffd87/assets/preview.png)
-
 CodeDraft is a Visual Studio Code extension that turns your everyday coding, commits, refactors, and bug fixes , into ready-to-publish drafts. No context switching, no blank page. Share your work effortlessly while staying in your coding workflow.
 
 > **Why CodeDraft Exists:** Most developers ship valuable work every day, and never talk about it. CodeDraft makes publishing a byproduct of coding, not an extra task.
@@ -20,7 +18,7 @@ CodeDraft is a Visual Studio Code extension that turns your everyday coding, com
 Press **`Ctrl + Shift + C`** to capture a code snippet and record key notes during your coding session.  
 CodeDraft automatically includes surrounding context so nothing important is lost.
 
-![CodeDraft Code Capture Illustration](https://raw.githubusercontent.com/Timadey/codedraft/3cd963a8eec4b7e32578b66ab041079a7deffd87/assets/preview.png)
+![Capture Code & Notes](https://raw.githubusercontent.com/Timadey/codedraft/3244d64ced4d773343b68e502d60c21fd9009a3e/assets/illustrations/gifs/code_capture_pressed.gif)
 
 ---
 
@@ -28,18 +26,14 @@ CodeDraft automatically includes surrounding context so nothing important is los
 When you’re ready, press **`Ctrl + Shift + G`**.  
 CodeDraft analyzes your captured snippets, notes, and Git context to generate a structured draft.
 
-📽 *Illustration video coming here*
-<!-- assets/step-2-generate.mp4 or .gif -->
+![Generate Draft](https://raw.githubusercontent.com/Timadey/codedraft/3244d64ced4d773343b68e502d60c21fd9009a3e/assets/illustrations/gifs/generate_drafts_pressed.gif)
 
 ---
 
 ### 3️⃣ Copy Markdown and publish
-Review the generated draft, then **copy the Markdown** and post it to your blog, LinkedIn, or documentation.
+Review the generated draft, then **copy the Markdown** and post it to your blog, LinkedIn, or docs.
 
-📽 *Illustration video coming here*
-<!-- assets/step-3-copy.mp4 or .gif -->
-
-That’s it. No extra tools. No rewriting from scratch.
+![Copy Markdown](https://raw.githubusercontent.com/Timadey/codedraft/3244d64ced4d773343b68e502d60c21fd9009a3e/assets/illustrations/gifs/copy_markdown_pressed.gif)
 
 ---
 
@@ -58,13 +52,14 @@ That’s it. No extra tools. No rewriting from scratch.
 ## 🛠️ Getting Started
 
 ### 1. Installation
-Install CodeDraft from the VS Code Marketplace.
+Install CodeDraft from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=timadey.codedraft).
 
 ### 2. Setup AI (Recommended: Ollama)
 For local AI generation and privacy:
 1. Download and install [Ollama](https://ollama.com/).
 2. Run `ollama run llama3` in your terminal.
 3. In VS Code settings, set `CodeDraft: AI Provider` to `ollama`.
+4. You can also use your Cloud AI provider of choice, (Gemini, OpenAI, Anthropic, Grok, etc.)
 
 ### 3. Usage
 - **Capture Change**: Select code or files, right-click and choose **CodeDraft: Capture Change** (`Cmd+Shift+C`).
