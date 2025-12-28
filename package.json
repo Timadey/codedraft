@@ -70,6 +70,11 @@
         "command": "codedraft.exportDraft",
         "title": "CodeDraft: Export Draft",
         "icon": "$(clippy)"
+      },
+      {
+        "command": "codedraft.previewDraft",
+        "title": "CodeDraft: Preview Draft",
+        "icon": "$(check)"
       }
     ],
     "viewsContainers": {
@@ -125,6 +130,11 @@
           "command": "codedraft.deleteDraft",
           "when": "view == codedraftView && viewItem == draft",
           "group": "inline"
+        },
+        {
+          "command": "codedraft.previewDraft",
+          "when": "view == codedraftView && viewItem == draft",
+          "group": "navigation"
         }
       ]
     },

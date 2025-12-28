@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
-import {StorageService} from './services/StorageService';
-import {CaptureService} from './services/CaptureService';
-import {AIService} from './services/AIService';
-import {DraftService} from './services/DraftService';
-import {CodeDraftTreeProvider} from './views/CodeDraftTreeProvider';
-import {Draft} from './models/Draft';
+import { StorageService } from './services/StorageService';
+import { CaptureService } from './services/CaptureService';
+import { AIService } from './services/AIService';
+import { DraftService } from './services/DraftService';
+import { MarkdownPreviewService } from './services/MarkdownPreviewService';
+import { CodeDraftTreeProvider } from './views/CodeDraftTreeProvider';
+import { Draft } from './models/Draft';
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('CodeDraft is now active!');
@@ -17,6 +18,7 @@ export async function activate(context: vscode.ExtensionContext) {
         const captureService = new CaptureService(storage);
         const aiService = new AIService();
         const draftService = new DraftService(storage, aiService);
+        const previewService = new MarkdownPreviewService(context);
 
         // Register tree view
         const treeProvider = new CodeDraftTreeProvider(captureService, storage);
@@ -74,10 +76,19 @@ export async function activate(context: vscode.ExtensionContext) {
 
                 try {
                     const draft = await draftService.generateDraftFromCaptures(captureIds);
-                    vscode.window.showInformationMessage(`✨ Draft created: ${draft.title}`);
 
-                    // Open draft
-                    await vscode.commands.executeCommand('codedraft.openDraft', draft);
+                    // Show notification with options
+                    const action = await vscode.window.showInformationMessage(
+                        `✨ Draft created: ${draft.title}`,
+                        'Preview',
+                        'Open in Editor'
+                    );
+
+                    if (action === 'Preview') {
+                        await vscode.commands.executeCommand('codedraft.previewDraft', { draft });
+                    } else if (action === 'Open in Editor') {
+                        await vscode.commands.executeCommand('codedraft.openDraft', draft);
+                    }
 
                     // Refresh tree
                     treeProvider.refresh();
@@ -163,6 +174,36 @@ export async function activate(context: vscode.ExtensionContext) {
                 if (treeItem?.draft) {
                     await draftService.exportToClipboard(treeItem.draft);
                 }
+            })
+        );
+
+        // Command: Preview Draft
+        context.subscriptions.push(
+            vscode.commands.registerCommand('codedraft.previewDraft', async (treeItem: any) => {
+                let draft: Draft | undefined = treeItem?.draft;
+
+                if (!draft) {
+                    const drafts = await draftService.loadDrafts();
+                    if (drafts.length === 0) {
+                        vscode.window.showInformationMessage('No drafts yet. Generate one first!');
+                        return;
+                    }
+
+                    const items = drafts.map(d => ({
+                        label: d.title,
+                        description: `${d.status} • ${d.metadata.wordCount} words`,
+                        draft: d
+                    }));
+
+                    const selected = await vscode.window.showQuickPick(items, {
+                        placeHolder: 'Select a draft to preview'
+                    });
+
+                    if (!selected) return;
+                    draft = selected.draft;
+                }
+
+                await previewService.showPreview(draft);
             })
         );
 
