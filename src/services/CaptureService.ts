@@ -15,19 +15,86 @@ export class CaptureService {
         this.gitService = new GitService();
     }
 
-    async captureCodeSnippet(editor?: vscode.TextEditor): Promise<CaptureItem | null> {
+    async captureCodeSnippet(editor?: vscode.TextEditor, options?: { commitHash?: string, selection?: vscode.Selection }): Promise<CaptureItem | null> {
+        let snippet = '';
+        let selection = options?.selection;
+
+        // 1. Check for specific commit context first (Auto-Capture)
+        if (options?.commitHash) {
+            const commit = await this.gitService.getLatestCommit();
+            if (commit && commit.hash.startsWith(options.commitHash)) {
+                // Create a commit-based capture
+                const context: CaptureContext = {
+                    filePath: 'commit',
+                    fileName: 'commit',
+                    language: 'diff',
+                    commitHash: commit.hash,
+                    commitMessage: commit.message,
+                    diff: await this.gitService.getCommitDiff(commit.hash) || undefined
+                };
+
+                const notes = await vscode.window.showInputBox({
+                    prompt: 'Add notes about this commit',
+                    placeHolder: `Notes for commit: ${commit.message}`,
+                    value: `Important change: ${commit.message}`
+                });
+
+                if (!notes) return null;
+
+                const capture = createCapture('snippet', context.diff || commit.message, {
+                    code: { snippet: context.diff || '', language: 'diff', filePath: 'commit', lineStart: 0, lineEnd: 0 },
+                    notes,
+                    context
+                });
+
+                await this.storage.saveCapture(capture);
+                this._onDidCapture.fire();
+                vscode.window.showInformationMessage('✅ Commit captured!');
+                return capture;
+            }
+        }
+
+        // 2. Handle Editor Selection
         if (!editor) {
             vscode.window.showErrorMessage('No active editor');
             return null;
         }
 
-        const selection = editor.selection;
-        if (selection.isEmpty) {
-            vscode.window.showWarningMessage('Please select code to capture');
-            return null;
+        if (!selection) {
+            selection = editor.selection;
         }
 
-        const snippet = editor.document.getText(selection);
+        // 3. Robust fallback for empty selection
+        if (selection.isEmpty) {
+            // Check for uncommitted changes to suggest "whole file" or "diff"
+            const changes = await this.gitService.getCurrentChanges();
+            const relPath = vscode.workspace.asRelativePath(editor.document.uri);
+
+            const isFileChanged = changes?.affectedFiles.includes(relPath);
+
+            if (isFileChanged) {
+                const action = await vscode.window.showWarningMessage(
+                    'No code selected. Capture current file changes?',
+                    'Capture File Changes',
+                    'Cancel'
+                );
+
+                if (action === 'Capture File Changes') {
+                    // Capture the diff for this file specifically if possible, or just the whole file content?
+                    // For now, let's capture the whole file content as "snapshot"
+                    snippet = editor.document.getText();
+                    selection = new vscode.Selection(0, 0, editor.document.lineCount, 0);
+                } else {
+                    return null;
+                }
+            } else {
+                vscode.window.showWarningMessage('Please select code to capture');
+                return null;
+            }
+        } else {
+            snippet = editor.document.getText(selection);
+        }
+
         const language = editor.document.languageId;
         const filePath = vscode.workspace.asRelativePath(editor.document.uri);
 

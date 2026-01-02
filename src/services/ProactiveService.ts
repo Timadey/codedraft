@@ -78,7 +78,7 @@ export class ProactiveService {
             await this.notificationManager.showCaptureSuggestion(
                 `Significant commit detected: "${commit.message}"`,
                 async () => {
-                    await this.captureService.captureCodeSnippet(vscode.window.activeTextEditor);
+                    await vscode.commands.executeCommand('codedraft.captureSnippet', { commitHash: commit.hash });
                 }
             );
         }

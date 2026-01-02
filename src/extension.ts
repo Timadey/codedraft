@@ -42,8 +42,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Command: Capture Code Snippet
         context.subscriptions.push(
-            vscode.commands.registerCommand('codedraft.captureSnippet', async () => {
-                await captureService.captureCodeSnippet(vscode.window.activeTextEditor);
+            vscode.commands.registerCommand('codedraft.captureSnippet', async (args?: any) => {
+                await captureService.captureCodeSnippet(vscode.window.activeTextEditor, args);
                 treeProvider.refresh();
             })
         );
