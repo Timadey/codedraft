@@ -9,6 +9,7 @@ import { StatusBarManager } from './services/StatusBarManager';
 import { MarkdownPreviewService } from './services/MarkdownPreviewService';
 import { CodeDraftTreeProvider } from './views/CodeDraftTreeProvider';
 import { Draft } from './models/Draft';
+import { TelemetryService } from './services/TelemetryService';
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('CodeDraft is now active!');
@@ -18,10 +19,13 @@ export async function activate(context: vscode.ExtensionContext) {
         const storage = new StorageService();
         await storage.initialize();
 
-        const captureService = new CaptureService(storage);
+        const telemetry = new TelemetryService(context.globalState);
+        await telemetry.initialize();
+
+        const captureService = new CaptureService(storage, telemetry);
         const aiService = new AIService();
         const gitService = new GitService();
-        const draftService = new DraftService(storage, aiService);
+        const draftService = new DraftService(storage, aiService, telemetry);
         const previewService = new MarkdownPreviewService(context);
         const proactiveService = new ProactiveService(captureService, draftService, gitService);
         const statusBar = new StatusBarManager(captureService);

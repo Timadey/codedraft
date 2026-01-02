@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Weekly Review reminders on Fridays.
     - Draft generation suggestions after accumulating 5+ captures.
 - **Configuration**: New settings to control notification cooldowns, enable/disable proactive mode, and set review schedules.
+- **Anonymous Telemetry**: Added optional usage data collection to help improve the extension.
+- **Privacy Controls**: Users can opt-out of general usage telemetry via `codedraft.telemetry.enabled`.
+- **Unique Installation Tracking**: Privately tracks unique installation and activation counts separate from usage data.
 
 ## [0.1.1] - 2025-12-28
 

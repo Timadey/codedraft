@@ -2,12 +2,18 @@ import * as vscode from 'vscode';
 import { Draft, createDraft } from '../models/Draft';
 import { StorageService } from './StorageService';
 import { AIService, DraftStyle, GenerationFocus, GenerationOptions } from './AIService';
+import { TelemetryService } from './TelemetryService';
 
 export class DraftService {
     constructor(
         private storage: StorageService,
-        private aiService: AIService
-    ) { }
+        private aiService: AIService,
+        private readonly telemetry?: TelemetryService
+    ) {
+        if (!this.telemetry) {
+            this.telemetry = { sendEvent: () => Promise.resolve() } as any;
+        }
+    }
 
     async generateDraftFromCaptures(captureIds: string[], initialOptions: GenerationOptions = {}): Promise<Draft> {
         const allCaptures = await this.storage.loadCaptures();
@@ -109,6 +115,15 @@ export class DraftService {
                 });
 
                 await this.storage.saveDraft(draft);
+
+                // Track draft event
+                this.telemetry?.sendEvent('draft_generated', {
+                    style: style,
+                    focus: focus,
+                    wordCount: draft.metadata.wordCount,
+                    provider: aiProvider
+                });
+
                 return draft;
             }
         );

@@ -3,6 +3,7 @@ import { CaptureItem, createCapture, CaptureType, CodeSnippet, CaptureContext } 
 import { StorageService } from './StorageService';
 import { ContextExtractor } from '../utils/ContextExtractor';
 import { GitService } from './GitService';
+import { TelemetryService } from './TelemetryService';
 
 export class CaptureService {
     private contextExtractor: ContextExtractor;
@@ -10,9 +11,12 @@ export class CaptureService {
     private _onDidCapture = new vscode.EventEmitter<void>();
     public readonly onDidCapture = this._onDidCapture.event;
 
-    constructor(private storage: StorageService) {
+    constructor(private storage: StorageService, private readonly telemetry?: TelemetryService) {
         this.contextExtractor = new ContextExtractor();
         this.gitService = new GitService();
+        if (!this.telemetry) {
+            this.telemetry = { sendEvent: () => Promise.resolve() } as any;
+        }
     }
 
     async captureCodeSnippet(editor?: vscode.TextEditor, options?: { commitHash?: string, selection?: vscode.Selection }): Promise<CaptureItem | null> {
@@ -172,6 +176,13 @@ export class CaptureService {
 
         await this.storage.saveCapture(capture);
         this._onDidCapture.fire();
+
+        this.telemetry?.sendEvent('capture_created', {
+            type: 'snippet',
+            language: language,
+            lineCount: codeSnippet.lineEnd - codeSnippet.lineStart
+        });
+
         vscode.window.showInformationMessage('✅ Code snippet captured with context!');
 
         return capture;
@@ -228,6 +239,12 @@ export class CaptureService {
         const capture = createCapture('learning', content, { context });
         await this.storage.saveCapture(capture);
         this._onDidCapture.fire();
+
+        this.telemetry?.sendEvent('capture_created', {
+            type: 'note',
+            length: content.length
+        });
+
         vscode.window.showInformationMessage('✅ Learning note captured!');
 
         return capture;

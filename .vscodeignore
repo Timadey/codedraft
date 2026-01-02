@@ -19,3 +19,4 @@ webpack.config.js
 **/*.map
 node_modules/**
 !node_modules/
+telemetry-proxy

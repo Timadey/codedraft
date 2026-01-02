@@ -205,6 +205,11 @@
           ],
           "default": "Friday",
           "description": "Day of week for weekly review reminder"
+        },
+        "codedraft.telemetry.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable anonymous usage data collection (count of installation, captures and drafts)."
         }
       }
     }
