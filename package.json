@@ -22,7 +22,6 @@
     "documentation",
     "learning",
     "notes",
-    "writing",
     "ai"
   ],
   "activationEvents": [
@@ -73,6 +72,11 @@
         "command": "codedraft.previewDraft",
         "title": "CodeDraft: Preview Draft",
         "icon": "$(eye)"
+      },
+      {
+        "command": "codedraft.showQuickMenu",
+        "title": "CodeDraft: Quick Menu",
+        "icon": "$(menu)"
       }
     ],
     "viewsContainers": {

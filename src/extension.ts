@@ -245,6 +245,67 @@ export async function activate(context: vscode.ExtensionContext) {
             })
         );
 
+        // Command: Show Quick Menu
+        context.subscriptions.push(
+            vscode.commands.registerCommand('codedraft.showQuickMenu', async () => {
+                const captures = await captureService.getAllCaptures();
+                const weeklyCaptures = await captureService.getAllCaptures({ days: 7 });
+
+                const items = [
+                    {
+                        label: '$(add) Capture Code',
+                        description: 'Capture selected code snippet',
+                        action: 'codedraft.captureSnippet'
+                    },
+                    {
+                        label: '$(note) Add Learning Note',
+                        description: 'Quick text note',
+                        action: 'codedraft.addLearning'
+                    }
+                ];
+
+                if (captures.length >= 3) {
+                    items.push({
+                        label: '$(wand) Generate Draft',
+                        description: `From ${captures.length} captures`,
+                        action: 'codedraft.generateDraft'
+                    });
+                }
+
+                if (weeklyCaptures.length > 0) {
+                    items.push({
+                        label: '$(calendar) Weekly Review',
+                        description: `${weeklyCaptures.length} this week`,
+                        action: 'codedraft.weeklyReview'
+                    });
+                }
+
+                items.push({
+                    label: '$(list-unordered) View All Captures',
+                    description: `${captures.length} total`,
+                    action: 'workbench.view.extension.codedraft'
+                });
+
+                items.push({
+                    label: '$(gear) Settings',
+                    description: 'Configure CodeDraft',
+                    action: 'workbench.action.openSettings'
+                });
+
+                const selected = await vscode.window.showQuickPick(items, {
+                    placeHolder: 'CodeDraft Quick Menu'
+                });
+
+                if (selected) {
+                    if (selected.action === 'workbench.action.openSettings') {
+                        await vscode.commands.executeCommand(selected.action, 'codedraft');
+                    } else {
+                        await vscode.commands.executeCommand(selected.action);
+                    }
+                }
+            })
+        );
+
         vscode.window.showInformationMessage('🚀 CodeDraft is ready! Press Ctrl+Shift+C to capture code.');
 
     } catch (error: any) {
