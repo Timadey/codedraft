@@ -45,7 +45,7 @@ export class NotificationManager {
                 this.stats.captureNeverAgain = saved.captureNeverAgain || 0;
                 this.stats.draftAccepted = saved.draftAccepted || 0;
                 this.stats.draftDismissed = saved.draftDismissed || 0;
-                
+
                 if (saved.patternSuccess) {
                     this.stats.patternSuccess = new Map(Object.entries(saved.patternSuccess));
                 }
@@ -91,22 +91,22 @@ export class NotificationManager {
     /**
      * Smart cooldown based on user behavior
      */
-    public canShowNotification(type: string = 'general'): boolean {
+    public canShowNotification(type: string = 'general', customCooldown?: number): boolean {
         // Check session limits
         if (this.notificationsThisSession >= this.MAX_NOTIFICATIONS_PER_SESSION) {
             return false;
         }
 
         const now = Date.now();
-        
+
         // Get base cooldown from config
         const baseCooldown = vscode.workspace.getConfiguration('codedraft')
             .get<number>('proactive.notificationCooldown') || 30;
-        
+
         // Adaptive cooldown based on acceptance rate
         const acceptanceRate = this.getAcceptanceRate();
         let adaptiveCooldown = baseCooldown;
-        
+
         if (acceptanceRate < 0.3) {
             // User dismisses often - increase cooldown
             adaptiveCooldown = baseCooldown * 2;
@@ -180,7 +180,7 @@ export class NotificationManager {
         }
 
         const actions = ['Capture Now', 'Not Now'];
-        
+
         // Only show "Don't Ask Again" if user has dismissed multiple times
         if (this.stats.captureDismissed >= 3) {
             actions.push('Remind Less Often');
@@ -193,7 +193,7 @@ export class NotificationManager {
 
         if (item === 'Capture Now') {
             this.stats.captureAccepted++;
-            
+
             // Update pattern success
             if (options.patterns) {
                 for (const pattern of options.patterns) {
@@ -241,6 +241,9 @@ export class NotificationManager {
         } = {}
     ): Promise<void> {
         const type = 'draft';
+        // // Use 24-hour cooldown for draft suggestions to avoid annoyance
+        // const cooldown24h = 24 * 60 * 60 * 1000;
+        // if (!this.canShowNotification(type, cooldown24h)) return;
         if (!this.canShowNotification(type)) return;
 
         this.lastNotificationTime = Date.now();
@@ -248,11 +251,11 @@ export class NotificationManager {
         this.notificationsThisSession++;
 
         let message = `✍️ You have ${count} captures ready`;
-        
+
         if (options.quality === 'high') {
             message += ' with rich context';
         }
-        
+
         if (options.themes && options.themes.length > 0) {
             message += `. Detected themes: ${options.themes.slice(0, 2).join(', ')}`;
         }
@@ -281,7 +284,7 @@ export class NotificationManager {
      */
     public async showWeeklyReviewReminder(count: number, highlights?: string[]): Promise<void> {
         let message = `📚 Weekly Review: You captured ${count} learnings this week`;
-        
+
         if (highlights && highlights.length > 0) {
             message += `\n\nHighlights:\n${highlights.map(h => `• ${h}`).join('\n')}`;
         }
@@ -307,7 +310,7 @@ export class NotificationManager {
         if (!this.canShowNotification('tip')) return;
 
         const actions = action ? [action.label, 'Got it'] : ['Got it'];
-        
+
         const item = await vscode.window.showInformationMessage(
             `💡 Tip: ${tip}`,
             ...actions

@@ -59,8 +59,8 @@ export class StatusBarManager implements vscode.Disposable {
 
         // Add session info to tooltip
         if (this.capturesThisSession > 0) {
-            const sessionInfo = sessionHours > 0 ? 
-                `${sessionHours}h ${sessionMinutes}m` : 
+            const sessionInfo = sessionHours > 0 ?
+                `${sessionHours}h ${sessionMinutes}m` :
                 `${sessionMinutes}m`;
             tooltip += `\n\nThis session: ${this.capturesThisSession} captures in ${sessionInfo}`;
         }
@@ -74,35 +74,6 @@ export class StatusBarManager implements vscode.Disposable {
         this.statusBarItem.text = `${icon} ${text}`;
         this.statusBarItem.tooltip = tooltip;
         this.statusBarItem.show();
-
-        // Show celebration for milestones
-        if (count === 5 || count === 10 || count === 25 || count === 50) {
-            this.showMilestone(count);
-        }
-    }
-
-    private async showMilestone(count: number): Promise<void> {
-        const messages = {
-            5: 'First 5 captures! Ready to generate your first draft? 🎉',
-            10: '10 captures milestone! You\'re building great habits! 🚀',
-            25: '25 captures! You\'re a documentation superstar! ⭐',
-            50: '50 captures! Master learner unlocked! 🏆'
-        };
-
-        const message = messages[count as keyof typeof messages];
-        if (message) {
-            const action = await vscode.window.showInformationMessage(
-                message,
-                'Generate Draft',
-                'View All'
-            );
-
-            if (action === 'Generate Draft') {
-                await vscode.commands.executeCommand('codedraft.generateDraft');
-            } else if (action === 'View All') {
-                await vscode.commands.executeCommand('workbench.view.extension.codedraft');
-            }
-        }
     }
 
     /**
