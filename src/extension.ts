@@ -3,6 +3,9 @@ import { StorageService } from './services/StorageService';
 import { CaptureService } from './services/CaptureService';
 import { AIService } from './services/AIService';
 import { DraftService } from './services/DraftService';
+import { GitService } from './services/GitService';
+import { ProactiveService } from './services/ProactiveService';
+import { StatusBarManager } from './services/StatusBarManager';
 import { MarkdownPreviewService } from './services/MarkdownPreviewService';
 import { CodeDraftTreeProvider } from './views/CodeDraftTreeProvider';
 import { Draft } from './models/Draft';
@@ -17,8 +20,19 @@ export async function activate(context: vscode.ExtensionContext) {
 
         const captureService = new CaptureService(storage);
         const aiService = new AIService();
+        const gitService = new GitService();
         const draftService = new DraftService(storage, aiService);
         const previewService = new MarkdownPreviewService(context);
+        const proactiveService = new ProactiveService(captureService, draftService, gitService);
+        const statusBar = new StatusBarManager(captureService);
+
+        // Start proactive monitoring
+        await proactiveService.start();
+
+        // Setup status bar updates
+        context.subscriptions.push(statusBar);
+        captureService.onDidCapture(() => statusBar.update());
+        await statusBar.update();
 
         // Register tree view
         const treeProvider = new CodeDraftTreeProvider(captureService, storage);

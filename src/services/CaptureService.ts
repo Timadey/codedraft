@@ -7,6 +7,8 @@ import { GitService } from './GitService';
 export class CaptureService {
     private contextExtractor: ContextExtractor;
     private gitService: GitService;
+    private _onDidCapture = new vscode.EventEmitter<void>();
+    public readonly onDidCapture = this._onDidCapture.event;
 
     constructor(private storage: StorageService) {
         this.contextExtractor = new ContextExtractor();
@@ -102,6 +104,7 @@ export class CaptureService {
         });
 
         await this.storage.saveCapture(capture);
+        this._onDidCapture.fire();
         vscode.window.showInformationMessage('✅ Code snippet captured with context!');
 
         return capture;
@@ -157,6 +160,7 @@ export class CaptureService {
 
         const capture = createCapture('learning', content, { context });
         await this.storage.saveCapture(capture);
+        this._onDidCapture.fire();
         vscode.window.showInformationMessage('✅ Learning note captured!');
 
         return capture;
@@ -179,6 +183,7 @@ export class CaptureService {
 
     async deleteCapture(id: string): Promise<void> {
         await this.storage.deleteCapture(id);
+        this._onDidCapture.fire();
         vscode.window.showInformationMessage('Capture deleted');
     }
 }

@@ -15,6 +15,11 @@ export interface GitDiffInfo {
 export class GitService {
     private gitApi: any;
 
+
+    private lastHead: string | undefined;
+    private _onDidCommit = new vscode.EventEmitter<GitCommitInfo>();
+    public readonly onDidCommit = this._onDidCommit.event;
+
     constructor() {
         this.initializeApi();
     }
@@ -22,8 +27,38 @@ export class GitService {
     private initializeApi() {
         const gitExtension = vscode.extensions.getExtension('vscode.git');
         if (gitExtension) {
-            this.gitApi = gitExtension.exports.getAPI(1);
+            const api = gitExtension.exports.getAPI(1);
+            this.gitApi = api;
+
+            if (this.gitApi.repositories.length > 0) {
+                this.setupRepoListener(this.gitApi.repositories[0]);
+            } else {
+                this.gitApi.onDidChangeState((state: any) => {
+                    if (state === 'initialized' && this.gitApi.repositories.length > 0) {
+                        this.setupRepoListener(this.gitApi.repositories[0]);
+                    }
+                });
+            }
         }
+    }
+
+    private setupRepoListener(repo: any) {
+        // Initialize last head
+        this.lastHead = repo.state.HEAD?.commit;
+
+        // Listen for changes
+        repo.state.onDidChange(async () => {
+            const currentHead = repo.state.HEAD?.commit;
+            if (currentHead && this.lastHead && currentHead !== this.lastHead) {
+                this.lastHead = currentHead;
+                const commitInfo = await this.getLatestCommit();
+                if (commitInfo) {
+                    this._onDidCommit.fire(commitInfo);
+                }
+            } else if (!this.lastHead && currentHead) {
+                this.lastHead = currentHead;
+            }
+        });
     }
 
     private getRepository() {

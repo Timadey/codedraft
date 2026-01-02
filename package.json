@@ -2,7 +2,7 @@
   "name": "codedraft",
   "displayName": "CodeDraft",
   "description": "Turn your coding progress into publishable posts, blogs, and docs.",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "timadey",
   "icon": "assets/icon.png",
   "repository": {
@@ -177,6 +177,30 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically extract rich context (function names, project info, etc.) when capturing"
+        },
+        "codedraft.proactive.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable proactive suggestions and monitoring"
+        },
+        "codedraft.proactive.notificationCooldown": {
+          "type": "number",
+          "default": 30,
+          "description": "Minimum minutes between proactive notifications"
+        },
+        "codedraft.proactive.weeklyReviewDay": {
+          "type": "string",
+          "enum": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "default": "Friday",
+          "description": "Day of week for weekly review reminder"
         }
       }
     }
